@@ -138,6 +138,24 @@ static void frontend_event(enum obs_frontend_event event, void *)
 	obs_frontend_source_list_free(&scenes);
 }
 
+static void source_rename(void *data, calldata_t *call_data)
+{
+	string new_name = calldata_string(call_data, "new_name");
+	string prev_name = calldata_string(call_data, "prev_name");
+	auto it = transition_table.find(prev_name);
+	if (it != transition_table.end()) {
+		transition_table[new_name] = it->second;
+		transition_table.erase(it);
+	}
+	for (const auto &it : transition_table) {
+		auto it2 = it.second.find(prev_name);
+		if (it2 != it.second.end()) {
+			transition_table[it.first][new_name] = it2->second;
+			transition_table[it.first].erase(it2);
+		}
+	}
+}
+
 bool obs_module_load(void)
 {
 	blog(LOG_INFO, "[Transition Table] loaded version %s", PROJECT_VERSION);
@@ -158,11 +176,19 @@ bool obs_module_load(void)
 
 	obs_frontend_add_save_callback(frontend_save_load, nullptr);
 	obs_frontend_add_event_callback(frontend_event, nullptr);
+	signal_handler_connect(obs_get_signal_handler(), "source_rename",
+			       source_rename, nullptr);
 
 	return true;
 }
 
-void obs_module_unload(void) {}
+void obs_module_unload(void)
+{
+	obs_frontend_remove_save_callback(frontend_save_load, nullptr);
+	obs_frontend_remove_event_callback(frontend_event, nullptr);
+	signal_handler_disconnect(obs_get_signal_handler(), "source_rename",
+				  source_rename, nullptr);
+}
 
 MODULE_EXPORT const char *obs_module_description(void)
 {
@@ -200,7 +226,7 @@ TransitionTableDialog::TransitionTableDialog(QMainWindow *parent)
 
 	connect(checkbox, &QCheckBox::stateChanged,
 		[this]() { SelectAllChanged(); });
-	
+
 	idx = 0;
 	fromCombo = new QComboBox();
 	fromCombo->setEditable(true);
