@@ -28,6 +28,9 @@ struct transition_info {
 
 map<string, map<string, transition_info>> transition_table;
 
+int transition_table_width = 0;
+int transition_table_height = 0;
+
 static void frontend_save_load(obs_data_t *save_data, bool saving, void *)
 {
 	if (saving) {
@@ -51,6 +54,13 @@ static void frontend_save_load(obs_data_t *save_data, bool saving, void *)
 			}
 		}
 		obs_data_set_array(obj, "transitions", transitions);
+		if (transition_table_width > 500 &&
+		    transition_table_height > 300) {
+			obs_data_set_int(obj, "dialog_width",
+					 transition_table_width);
+			obs_data_set_int(obj, "dialog_height",
+					 transition_table_height);
+		}
 		obs_data_set_obj(save_data, "transition-table", obj);
 		obs_data_array_release(transitions);
 		obs_data_release(obj);
@@ -58,6 +68,10 @@ static void frontend_save_load(obs_data_t *save_data, bool saving, void *)
 		transition_table.clear();
 		obs_data_t *obj =
 			obs_data_get_obj(save_data, "transition-table");
+
+		transition_table_width = obs_data_get_int(obj, "dialog_width");
+		transition_table_height =
+			obs_data_get_int(obj, "dialog_height");
 		obs_data_array_t *transitions =
 			obs_data_get_array(obj, "transitions");
 		if (transitions) {
@@ -321,10 +335,16 @@ TransitionTableDialog::TransitionTableDialog(QMainWindow *parent)
 	setSizeGripEnabled(true);
 
 	setMinimumSize(500, 300);
+	if (transition_table_width > 500 && transition_table_height > 300) {
+		resize(transition_table_width, transition_table_height);
+	}
 }
 
 TransitionTableDialog::~TransitionTableDialog()
 {
+	auto size = this->size();
+	transition_table_width = size.width();
+	transition_table_height = size.height();
 	obs_frontend_source_list_free(&scenes);
 	obs_frontend_source_list_free(&transitions);
 }
