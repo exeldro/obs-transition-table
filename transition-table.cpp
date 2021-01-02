@@ -86,11 +86,8 @@ static void frontend_save_load(obs_data_t *save_data, bool saving, void *)
 	}
 }
 
-static void frontend_event(enum obs_frontend_event event, void *)
+static void set_transition_overrides()
 {
-	if (event != OBS_FRONTEND_EVENT_SCENE_CHANGED)
-		return;
-
 	obs_source_t *scene = obs_frontend_get_current_scene();
 	string fromScene = obs_source_get_name(scene);
 	obs_source_release(scene);
@@ -136,6 +133,14 @@ static void frontend_event(enum obs_frontend_event event, void *)
 		obs_data_release(data);
 	}
 	obs_frontend_source_list_free(&scenes);
+}
+
+static void frontend_event(enum obs_frontend_event event, void *)
+{
+	if (event != OBS_FRONTEND_EVENT_SCENE_CHANGED)
+		return;
+
+	set_transition_overrides();
 }
 
 static void source_rename(void *data, calldata_t *call_data)
@@ -336,6 +341,7 @@ void TransitionTableDialog::AddClicked()
 	t.transition = transition.toUtf8().constData();
 	t.duration = durationSpin->value();
 	RefreshTable();
+	set_transition_overrides();
 }
 
 void TransitionTableDialog::DeleteClicked()
@@ -367,6 +373,7 @@ void TransitionTableDialog::DeleteClicked()
 		fs_it->second.erase(ts_it);
 	}
 	RefreshTable();
+	set_transition_overrides();
 }
 
 void TransitionTableDialog::SelectAllChanged()
