@@ -198,6 +198,9 @@ TransitionTableDialog::TransitionTableDialog(QMainWindow *parent)
 	QCheckBox *checkbox = new QCheckBox;
 	mainLayout->addWidget(checkbox, 0, idx++, Qt::AlignCenter);
 
+	connect(checkbox, &QCheckBox::stateChanged,
+		[this]() { SelectAllChanged(); });
+	
 	idx = 0;
 	fromCombo = new QComboBox();
 	fromCombo->setEditable(true);
@@ -338,6 +341,22 @@ void TransitionTableDialog::DeleteClicked()
 		fs_it->second.erase(ts_it);
 	}
 	RefreshTable();
+}
+
+void TransitionTableDialog::SelectAllChanged()
+{
+	auto *item = mainLayout->itemAtPosition(0, 4);
+	auto *checkBox = dynamic_cast<QCheckBox *>(item->widget());
+	bool checked = checkBox && checkBox->isChecked();
+	for (auto row = 2; row < mainLayout->rowCount(); row++) {
+		item = mainLayout->itemAtPosition(row, 4);
+		if (!item)
+			continue;
+		auto *checkBox = dynamic_cast<QCheckBox *>(item->widget());
+		if (!checkBox)
+			continue;
+		checkBox->setChecked(checked);
+	}
 }
 
 void TransitionTableDialog::RefreshTable()

@@ -25,6 +25,7 @@ class TransitionTableDialog : public QDialog {
 	struct obs_frontend_source_list transitions = {};
 	void AddClicked();
 	void DeleteClicked();
+	void SelectAllChanged();
 public:
 	TransitionTableDialog(QMainWindow *parent = nullptr);
 	~TransitionTableDialog();
