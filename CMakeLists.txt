@@ -1,4 +1,4 @@
-project(transition-table VERSION 0.1.1)
+project(transition-table VERSION 0.1.2)
 set(PROJECT_FULL_NAME "Transition Table")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/version.h.in ${CMAKE_CURRENT_SOURCE_DIR}/version.h)

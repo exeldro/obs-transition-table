@@ -31,6 +31,36 @@ map<string, map<string, transition_info>> transition_table;
 int transition_table_width = 0;
 int transition_table_height = 0;
 
+static void load_transition_matrix(obs_data_t *obj)
+{
+	obs_data_array_t *transitions = obs_data_get_array(obj, "matrix");
+	if (!transitions)
+		return;
+	const size_t count = obs_data_array_count(transitions);
+	for (size_t i = 0; i < count; i++) {
+		obs_data_t *transition = obs_data_array_item(transitions, i);
+		string fromScene = obs_data_get_string(transition, "scene");
+		obs_data_array_t *data = obs_data_get_array(transition, "data");
+		const size_t transition_count = obs_data_array_count(data);
+		for (size_t j = 0; j < transition_count; j++) {
+			obs_data_t *transition2 = obs_data_array_item(data, j);
+			string toScene = obs_data_get_string(transition2, "to");
+			if (!fromScene.empty() && !toScene.empty()) {
+				transition_table[fromScene][toScene].transition =
+					obs_data_get_string(transition2,
+							    "transition");
+				transition_table[fromScene][toScene].duration =
+					obs_data_get_int(transition2,
+							 "duration");
+			}
+			obs_data_release(transition2);
+		}
+		obs_data_array_release(data);
+		obs_data_release(transition);
+	}
+	obs_data_array_release(transitions);
+}
+
 static void frontend_save_load(obs_data_t *save_data, bool saving, void *)
 {
 	if (saving) {
@@ -68,35 +98,70 @@ static void frontend_save_load(obs_data_t *save_data, bool saving, void *)
 		transition_table.clear();
 		obs_data_t *obj =
 			obs_data_get_obj(save_data, "transition-table");
-
-		transition_table_width = obs_data_get_int(obj, "dialog_width");
-		transition_table_height =
-			obs_data_get_int(obj, "dialog_height");
-		obs_data_array_t *transitions =
-			obs_data_get_array(obj, "transitions");
-		if (transitions) {
-			size_t count = obs_data_array_count(transitions);
-			for (size_t i = 0; i < count; i++) {
-				obs_data_t *transition =
-					obs_data_array_item(transitions, i);
-				string fromScene = obs_data_get_string(
-					transition, "from_scene");
-				string toScene = obs_data_get_string(
-					transition, "to_scene");
-				string transitionName = obs_data_get_string(
-					transition, "transition");
-				bool custom_duration = obs_data_get_bool(
-					transition, "custom_duration");
-				const uint32_t duration = obs_data_get_int(
-					transition, "duration");
-				transition_table[fromScene][toScene].transition =
-					transitionName;
-				transition_table[fromScene][toScene].duration =
-					duration;
+		if (obj) {
+			transition_table_width =
+				obs_data_get_int(obj, "dialog_width");
+			transition_table_height =
+				obs_data_get_int(obj, "dialog_height");
+			obs_data_array_t *transitions =
+				obs_data_get_array(obj, "transitions");
+			if (transitions) {
+				size_t count =
+					obs_data_array_count(transitions);
+				for (size_t i = 0; i < count; i++) {
+					obs_data_t *transition =
+						obs_data_array_item(transitions,
+								    i);
+					string fromScene = obs_data_get_string(
+						transition, "from_scene");
+					string toScene = obs_data_get_string(
+						transition, "to_scene");
+					string transitionName =
+						obs_data_get_string(
+							transition,
+							"transition");
+					bool custom_duration = obs_data_get_bool(
+						transition, "custom_duration");
+					const uint32_t duration =
+						obs_data_get_int(transition,
+								 "duration");
+					transition_table[fromScene][toScene]
+						.transition = transitionName;
+					transition_table[fromScene][toScene]
+						.duration = duration;
+				}
+				obs_data_array_release(transitions);
 			}
-			obs_data_array_release(transitions);
+			obs_data_release(obj);
+		} else {
+			obj = obs_data_get_obj(save_data,
+					       "obs-transition-matrix");
+			if (obj) {
+				load_transition_matrix(obj);
+				obs_data_release(obj);
+			}
+
+			obs_frontend_source_list scenes = {};
+			obs_frontend_get_scenes(&scenes);
+			for (size_t i = 0; i < scenes.sources.num; i++) {
+				obs_data_t *data =
+					obs_source_get_private_settings(
+						scenes.sources.array[i]);
+				string transitionName =
+					obs_data_get_string(data, "transition");
+				string sceneName = obs_source_get_name(
+					scenes.sources.array[i]);
+				if (!transitionName.empty()) {
+					transition_table["Any"][sceneName]
+						.transition = transitionName;
+					transition_table["Any"][sceneName]
+						.duration = obs_data_get_int(
+						data, "transition_duration");
+				}
+				obs_data_release(data);
+			}
+			obs_frontend_source_list_free(&scenes);
 		}
-		obs_data_release(obj);
 	}
 }
 
