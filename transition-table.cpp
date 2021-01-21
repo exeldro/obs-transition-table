@@ -307,6 +307,9 @@ TransitionTableDialog::TransitionTableDialog(QMainWindow *parent)
 	mainLayout->addWidget(label, 0, idx++, Qt::AlignCenter);
 	QCheckBox *checkbox = new QCheckBox;
 	mainLayout->addWidget(checkbox, 0, idx++, Qt::AlignCenter);
+	mainLayout->setColumnStretch(0, 1);
+	mainLayout->setColumnStretch(1, 1);
+	mainLayout->setColumnStretch(2, 1);
 
 	connect(checkbox, &QCheckBox::stateChanged,
 		[this]() { SelectAllChanged(); });
@@ -344,19 +347,13 @@ TransitionTableDialog::TransitionTableDialog(QMainWindow *parent)
 					 QByteArray(trName.c_str()));
 	}
 	mainLayout->addWidget(transitionCombo, 1, idx++);
-	auto durationArea = new QWidget;
-	auto durationLayout = new QHBoxLayout;
-	durationArea->setLayout(durationLayout);
-	durationCheckbox = new QCheckBox;
-	durationLayout->addWidget(checkbox);
 	durationSpin = new QSpinBox;
 	durationSpin->setMinimum(50);
 	durationSpin->setMaximum(20000);
 	durationSpin->setSingleStep(50);
 	durationSpin->setValue(500);
 	durationSpin->setSuffix("ms");
-	durationLayout->addWidget(durationSpin);
-	mainLayout->addWidget(durationArea, 1, idx++);
+	mainLayout->addWidget(durationSpin, 1, idx++);
 	QPushButton *addButton = new QPushButton(obs_module_text("Set"));
 	connect(addButton, &QPushButton::clicked, [this]() { AddClicked(); });
 	mainLayout->addWidget(addButton, 1, idx++, Qt::AlignCenter);

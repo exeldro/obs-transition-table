@@ -17,7 +17,6 @@ class TransitionTableDialog : public QDialog {
 	QComboBox *fromCombo;
 	QComboBox *toCombo;
 	QComboBox *transitionCombo;
-	QCheckBox *durationCheckbox;
 	QSpinBox *durationSpin;
 
 
