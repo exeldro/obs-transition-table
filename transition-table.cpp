@@ -165,6 +165,19 @@ static void frontend_save_load(obs_data_t *save_data, bool saving, void *)
 	}
 }
 
+static void clear_transition_overrides()
+{
+	obs_frontend_source_list scenes = {};
+	obs_frontend_get_scenes(&scenes);
+	for (size_t i = 0; i < scenes.sources.num; i++) {
+		obs_data_t *data = obs_source_get_private_settings(
+			scenes.sources.array[i]);
+		obs_data_erase(data, "transition");
+		obs_data_release(data);
+	}
+	obs_frontend_source_list_free(&scenes);
+}
+
 static void set_transition_overrides()
 {
 	obs_source_t *scene = obs_frontend_get_current_scene();
@@ -214,12 +227,14 @@ static void set_transition_overrides()
 	obs_frontend_source_list_free(&scenes);
 }
 
+static bool transition_table_enabled = true;
+
 static void frontend_event(enum obs_frontend_event event, void *)
 {
 	if (event != OBS_FRONTEND_EVENT_SCENE_CHANGED)
 		return;
-
-	set_transition_overrides();
+	if (transition_table_enabled)
+		set_transition_overrides();
 }
 
 static void source_rename(void *data, calldata_t *call_data)
@@ -239,6 +254,30 @@ static void source_rename(void *data, calldata_t *call_data)
 		}
 	}
 }
+
+bool enable_hotkey(void *data, obs_hotkey_pair_id id, obs_hotkey_t *hotkey,
+		   bool pressed)
+{
+	if (!transition_table_enabled && pressed) {
+		transition_table_enabled = false;
+		set_transition_overrides();
+		return true;
+	}
+	return false;
+}
+
+bool disable_hotkey(void *data, obs_hotkey_pair_id id, obs_hotkey_t *hotkey,
+		    bool pressed)
+{
+	if (transition_table_enabled && pressed) {
+		transition_table_enabled = false;
+		clear_transition_overrides();
+		return true;
+	}
+	return false;
+}
+
+obs_hotkey_pair_id transition_table_hotkey = OBS_INVALID_HOTKEY_PAIR_ID;
 
 bool obs_module_load(void)
 {
@@ -263,11 +302,19 @@ bool obs_module_load(void)
 	signal_handler_connect(obs_get_signal_handler(), "source_rename",
 			       source_rename, nullptr);
 
+	transition_table_hotkey = obs_hotkey_pair_register_frontend(
+		"transition-table.enable",
+		obs_module_text("TransitionTable.Enable"),
+		"transition-table.disable",
+		obs_module_text("TransitionTable.Disable"), enable_hotkey,
+		disable_hotkey, nullptr, nullptr);
+
 	return true;
 }
 
 void obs_module_unload(void)
 {
+	obs_hotkey_pair_unregister(transition_table_hotkey);
 	obs_frontend_remove_save_callback(frontend_save_load, nullptr);
 	obs_frontend_remove_event_callback(frontend_event, nullptr);
 	signal_handler_disconnect(obs_get_signal_handler(), "source_rename",
@@ -423,7 +470,8 @@ void TransitionTableDialog::AddClicked()
 	t.transition = transition.toUtf8().constData();
 	t.duration = durationSpin->value();
 	RefreshTable();
-	set_transition_overrides();
+	if (transition_table_enabled)
+		set_transition_overrides();
 }
 
 void TransitionTableDialog::DeleteClicked()
@@ -455,7 +503,8 @@ void TransitionTableDialog::DeleteClicked()
 		fs_it->second.erase(ts_it);
 	}
 	RefreshTable();
-	set_transition_overrides();
+	if (transition_table_enabled)
+		set_transition_overrides();
 }
 
 void TransitionTableDialog::SelectAllChanged()
@@ -491,10 +540,10 @@ void TransitionTableDialog::RefreshTable()
 	}
 	auto row = 2;
 	for (const auto &it : transition_table) {
+		if (!fromScene.isEmpty() &&
+		    fromScene != QString::fromUtf8(it.first.c_str()))
+			continue;
 		for (const auto &it2 : it.second) {
-			if (!fromScene.isEmpty() &&
-			    fromScene != QString::fromUtf8(it.first.c_str()))
-				continue;
 			if (!toScene.isEmpty() &&
 			    toScene != QString::fromUtf8(it2.first.c_str()))
 				continue;
