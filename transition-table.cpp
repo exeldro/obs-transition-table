@@ -31,6 +31,8 @@ map<string, map<string, transition_info>> transition_table;
 int transition_table_width = 0;
 int transition_table_height = 0;
 
+obs_hotkey_pair_id transition_table_hotkey = OBS_INVALID_HOTKEY_PAIR_ID;
+
 static void load_transition_matrix(obs_data_t *obj)
 {
 	obs_data_array_t *transitions = obs_data_get_array(obj, "matrix");
@@ -91,6 +93,17 @@ static void frontend_save_load(obs_data_t *save_data, bool saving, void *)
 			obs_data_set_int(obj, "dialog_height",
 					 transition_table_height);
 		}
+		obs_data_array_t *data0 = nullptr;
+		obs_data_array_t *data1 = nullptr;
+		obs_hotkey_pair_save(transition_table_hotkey, &data0, &data1);
+		if (data0) {
+			obs_data_set_array(obj, "enable_hotkey", data0);
+			obs_data_array_release(data0);
+		}
+		if (data1) {
+			obs_data_set_array(obj, "disable_hotkey", data1);
+			obs_data_array_release(data1);
+		}
 		obs_data_set_obj(save_data, "transition-table", obj);
 		obs_data_array_release(transitions);
 		obs_data_release(obj);
@@ -103,6 +116,11 @@ static void frontend_save_load(obs_data_t *save_data, bool saving, void *)
 				obs_data_get_int(obj, "dialog_width");
 			transition_table_height =
 				obs_data_get_int(obj, "dialog_height");
+
+			obs_hotkey_pair_load(
+				transition_table_hotkey,
+				obs_data_get_array(obj, "enable_hotkey"),
+				obs_data_get_array(obj, "disable_hotkey"));
 			obs_data_array_t *transitions =
 				obs_data_get_array(obj, "transitions");
 			if (transitions) {
@@ -184,7 +202,8 @@ static void set_transition_overrides()
 	string fromScene = obs_source_get_name(scene);
 	obs_source_release(scene);
 
-	auto fs_it = transition_table.find(fromScene);
+	auto fs_it = fromScene.empty() ? transition_table.end()
+				       : transition_table.find(fromScene);
 	auto as_it = transition_table.find("Any");
 
 	obs_frontend_source_list scenes = {};
@@ -259,7 +278,7 @@ bool enable_hotkey(void *data, obs_hotkey_pair_id id, obs_hotkey_t *hotkey,
 		   bool pressed)
 {
 	if (!transition_table_enabled && pressed) {
-		transition_table_enabled = false;
+		transition_table_enabled = true;
 		set_transition_overrides();
 		return true;
 	}
@@ -276,8 +295,6 @@ bool disable_hotkey(void *data, obs_hotkey_pair_id id, obs_hotkey_t *hotkey,
 	}
 	return false;
 }
-
-obs_hotkey_pair_id transition_table_hotkey = OBS_INVALID_HOTKEY_PAIR_ID;
 
 bool obs_module_load(void)
 {
