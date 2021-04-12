@@ -250,10 +250,12 @@ static bool transition_table_enabled = true;
 
 static void frontend_event(enum obs_frontend_event event, void *)
 {
-	if (event != OBS_FRONTEND_EVENT_SCENE_CHANGED)
-		return;
-	if (transition_table_enabled)
-		set_transition_overrides();
+	if (event == OBS_FRONTEND_EVENT_SCENE_CHANGED) {
+		if (transition_table_enabled)
+			set_transition_overrides();
+	} else if (event == OBS_FRONTEND_EVENT_SCENE_COLLECTION_CLEANUP) {
+		transition_table.clear();
+	}
 }
 
 static void source_rename(void *data, calldata_t *call_data)
