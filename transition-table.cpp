@@ -11,6 +11,7 @@
 #include <QScrollArea>
 #include <QVBoxLayout>
 #include <QLabel>
+#include <QMouseEvent>
 #include <QSpinBox>
 #include <QTableView>
 #include <QtWidgets/QColorDialog>
@@ -609,4 +610,29 @@ void TransitionTableDialog::RefreshTable()
 			row++;
 		}
 	}
+}
+
+void TransitionTableDialog::mouseDoubleClickEvent(QMouseEvent *event)
+{
+	QWidget *widget = childAt(event->pos());
+	if (!widget)
+		return;
+	int index = mainLayout->indexOf(widget);
+	if (index < 0)
+		return;
+
+	int row, column, row_span, col_span;
+	mainLayout->getItemPosition(index, &row, &column, &row_span, &col_span);
+	if (row < 2)
+		return;
+
+	const QString from =
+		dynamic_cast<QLabel *>(
+			mainLayout->itemAtPosition(row, 0)->widget())
+			->text();
+	fromCombo->setCurrentText(from);
+	const QString to = dynamic_cast<QLabel *>(
+				   mainLayout->itemAtPosition(row, 1)->widget())
+				   ->text();
+	toCombo->setCurrentText(to);
 }
