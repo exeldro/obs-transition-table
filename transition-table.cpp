@@ -6,6 +6,7 @@
 #include <obs-frontend-api.h>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCompleter>
 
 #include <QPushButton>
 #include <QScrollArea>
@@ -384,11 +385,19 @@ TransitionTableDialog::TransitionTableDialog(QMainWindow *parent)
 	idx = 0;
 	fromCombo = new QComboBox();
 	fromCombo->setEditable(true);
+	auto *completer = fromCombo->completer();
+	completer->setCaseSensitivity(Qt::CaseInsensitive);
+	completer->setFilterMode(Qt::MatchContains);
+	completer->setCompletionMode(QCompleter::PopupCompletion);
 	fromCombo->addItem("", QByteArray(""));
 	fromCombo->addItem(obs_module_text("Any"), QByteArray("Any"));
 	mainLayout->addWidget(fromCombo, 1, idx++);
 	toCombo = new QComboBox();
 	toCombo->setEditable(true);
+	completer = toCombo->completer();
+	completer->setCaseSensitivity(Qt::CaseInsensitive);
+	completer->setFilterMode(Qt::MatchContains);
+	completer->setCompletionMode(QCompleter::PopupCompletion);
 	toCombo->addItem("", QByteArray(""));
 	toCombo->addItem(obs_module_text("Any"), QByteArray("Any"));
 	mainLayout->addWidget(toCombo, 1, idx++);
@@ -561,7 +570,8 @@ void TransitionTableDialog::RefreshTable()
 	auto row = 2;
 	for (const auto &it : transition_table) {
 		if (!fromScene.isEmpty() &&
-		    !QString::fromUtf8(it.first.c_str()).contains(fromScene, Qt::CaseInsensitive))
+		    !QString::fromUtf8(it.first.c_str())
+			     .contains(fromScene, Qt::CaseInsensitive))
 			continue;
 		for (const auto &it2 : it.second) {
 			if (!toScene.isEmpty() &&
