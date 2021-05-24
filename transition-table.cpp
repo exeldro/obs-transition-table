@@ -561,11 +561,12 @@ void TransitionTableDialog::RefreshTable()
 	auto row = 2;
 	for (const auto &it : transition_table) {
 		if (!fromScene.isEmpty() &&
-		    fromScene != QString::fromUtf8(it.first.c_str()))
+		    !QString::fromUtf8(it.first.c_str()).contains(fromScene))
 			continue;
 		for (const auto &it2 : it.second) {
 			if (!toScene.isEmpty() &&
-			    toScene != QString::fromUtf8(it2.first.c_str()))
+			    !QString::fromUtf8(it2.first.c_str())
+				     .contains(toScene))
 				continue;
 			auto col = 0;
 			auto *label =
