@@ -561,12 +561,12 @@ void TransitionTableDialog::RefreshTable()
 	auto row = 2;
 	for (const auto &it : transition_table) {
 		if (!fromScene.isEmpty() &&
-		    !QString::fromUtf8(it.first.c_str()).contains(fromScene))
+		    !QString::fromUtf8(it.first.c_str()).contains(fromScene, Qt::CaseInsensitive))
 			continue;
 		for (const auto &it2 : it.second) {
 			if (!toScene.isEmpty() &&
 			    !QString::fromUtf8(it2.first.c_str())
-				     .contains(toScene))
+				     .contains(toScene, Qt::CaseInsensitive))
 				continue;
 			auto col = 0;
 			auto *label =
@@ -626,14 +626,24 @@ void TransitionTableDialog::mouseDoubleClickEvent(QMouseEvent *event)
 	mainLayout->getItemPosition(index, &row, &column, &row_span, &col_span);
 	if (row < 2)
 		return;
-
-	const QString from =
-		dynamic_cast<QLabel *>(
-			mainLayout->itemAtPosition(row, 0)->widget())
-			->text();
+	QLayoutItem *item = mainLayout->itemAtPosition(row, 0);
+	if (!item)
+		return;
+	auto label = dynamic_cast<QLabel *>(item->widget());
+	if (!label)
+		return;
+	const QString from = label->text();
+	if (from.isEmpty())
+		return;
+	item = mainLayout->itemAtPosition(row, 1);
+	if (!item)
+		return;
+	label = dynamic_cast<QLabel *>(item->widget());
+	if (!label)
+		return;
+	const QString to = label->text();
+	if (to.isEmpty())
+		return;
 	fromCombo->setCurrentText(from);
-	const QString to = dynamic_cast<QLabel *>(
-				   mainLayout->itemAtPosition(row, 1)->widget())
-				   ->text();
 	toCombo->setCurrentText(to);
 }
