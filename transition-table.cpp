@@ -568,6 +568,7 @@ void TransitionTableDialog::RefreshTable()
 		}
 	}
 	int duration = 0;
+	string transition;
 	auto row = 2;
 	for (const auto &it : transition_table) {
 		if (!fromScene.isEmpty() &&
@@ -620,11 +621,15 @@ void TransitionTableDialog::RefreshTable()
 			mainLayout->addWidget(checkBox, row, col++,
 					      Qt::AlignCenter);
 			duration = it2.second.duration;
+			transition = it2.second.transition;
 			row++;
 		}
 	}
-	if (row == 3 && duration) {
-		durationSpin->setValue(duration);
+	if (row == 3) {
+		if (duration)
+			durationSpin->setValue(duration);
+		if (!transition.empty())
+			transitionCombo->setCurrentText(transition.c_str());
 	}
 }
 
