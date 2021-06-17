@@ -567,6 +567,7 @@ void TransitionTableDialog::RefreshTable()
 			}
 		}
 	}
+	int duration = 0;
 	auto row = 2;
 	for (const auto &it : transition_table) {
 		if (!fromScene.isEmpty() &&
@@ -618,8 +619,12 @@ void TransitionTableDialog::RefreshTable()
 			auto *checkBox = new QCheckBox;
 			mainLayout->addWidget(checkBox, row, col++,
 					      Qt::AlignCenter);
+			duration = it2.second.duration;
 			row++;
 		}
+	}
+	if (row == 3 && duration) {
+		durationSpin->setValue(duration);
 	}
 }
 
