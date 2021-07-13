@@ -118,11 +118,13 @@ static void frontend_save_load(obs_data_t *save_data, bool saving, void *)
 				obs_data_get_int(obj, "dialog_width");
 			transition_table_height =
 				obs_data_get_int(obj, "dialog_height");
-
-			obs_hotkey_pair_load(
-				transition_table_hotkey,
-				obs_data_get_array(obj, "enable_hotkey"),
-				obs_data_get_array(obj, "disable_hotkey"));
+			obs_data_array_t *eh =
+				obs_data_get_array(obj, "enable_hotkey");
+			obs_data_array_t *dh =
+				obs_data_get_array(obj, "disable_hotkey");
+			obs_hotkey_pair_load(transition_table_hotkey, eh, dh);
+			obs_data_array_release(eh);
+			obs_data_array_release(dh);
 			obs_data_array_t *transitions =
 				obs_data_get_array(obj, "transitions");
 			if (transitions) {
@@ -149,6 +151,7 @@ static void frontend_save_load(obs_data_t *save_data, bool saving, void *)
 						.transition = transitionName;
 					transition_table[fromScene][toScene]
 						.duration = duration;
+					obs_data_release(transition);
 				}
 				obs_data_array_release(transitions);
 			}
@@ -255,7 +258,8 @@ static void frontend_event(enum obs_frontend_event event, void *)
 	if (event == OBS_FRONTEND_EVENT_SCENE_CHANGED) {
 		if (transition_table_enabled)
 			set_transition_overrides();
-	} else if (event == OBS_FRONTEND_EVENT_SCENE_COLLECTION_CLEANUP) {
+	} else if (event == OBS_FRONTEND_EVENT_SCENE_COLLECTION_CLEANUP ||
+		   event == OBS_FRONTEND_EVENT_EXIT) {
 		transition_table.clear();
 	}
 }
@@ -340,6 +344,7 @@ void obs_module_unload(void)
 	obs_frontend_remove_event_callback(frontend_event, nullptr);
 	signal_handler_disconnect(obs_get_signal_handler(), "source_rename",
 				  source_rename, nullptr);
+	transition_table.clear();
 }
 
 MODULE_EXPORT const char *obs_module_description(void)
