@@ -313,10 +313,10 @@ bool obs_module_load(void)
 	auto cb = [] {
 		obs_frontend_push_ui_translation(obs_module_get_string);
 
-		TransitionTableDialog ttd(
+		auto ttd = new TransitionTableDialog(
 			(QMainWindow *)obs_frontend_get_main_window());
-		ttd.exec();
-
+		ttd->setAttribute(Qt::WA_DeleteOnClose);
+		ttd->show();
 		obs_frontend_pop_ui_translation();
 	};
 
