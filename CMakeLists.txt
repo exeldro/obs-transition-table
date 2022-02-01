@@ -1,7 +1,12 @@
+cmake_minimum_required(VERSION 3.18)
 project(transition-table VERSION 0.2.2)
 set(PROJECT_FULL_NAME "Transition Table")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/version.h.in ${CMAKE_CURRENT_SOURCE_DIR}/version.h)
+
+find_package(Qt5Widgets)
+
+set(CMAKE_AUTOMOC ON)
 
 set(transition-table_HEADERS
     transition-table.hpp
