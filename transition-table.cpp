@@ -85,6 +85,7 @@ static void frontend_save_load(obs_data_t *save_data, bool saving, void *)
 						 it2.second.duration);
 				obs_data_array_push_back(transitions,
 							 transition);
+				obs_data_release(transition);
 			}
 		}
 		obs_data_set_array(obj, "transitions", transitions);
