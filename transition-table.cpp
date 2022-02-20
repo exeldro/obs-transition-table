@@ -529,6 +529,8 @@ void TransitionTableDialog::DeleteClicked()
 		if (!label)
 			continue;
 		string fromScene = label->text().toUtf8().constData();
+		if (fromScene == obs_module_text("Any"))
+			fromScene = "Any";
 		auto fs_it = transition_table.find(fromScene);
 		if (fs_it == transition_table.end())
 			continue;
@@ -537,6 +539,8 @@ void TransitionTableDialog::DeleteClicked()
 		if (!label)
 			continue;
 		string toScene = label->text().toUtf8().constData();
+		if (toScene == obs_module_text("Any"))
+			toScene = "Any";
 		auto ts_it = fs_it->second.find(toScene);
 		if (ts_it == fs_it->second.end())
 			continue;
@@ -600,7 +604,8 @@ void TransitionTableDialog::RefreshTable()
 				new QLabel(QString::fromUtf8(it.first.c_str()));
 			if (it.first == "Any") {
 				label->setProperty("themeID", "good");
-				label->setText(QString::fromUtf8(obs_module_text("Any")));
+				label->setText(QString::fromUtf8(
+					obs_module_text("Any")));
 			} else {
 				auto scene = obs_get_source_by_name(
 					it.first.c_str());
@@ -615,7 +620,8 @@ void TransitionTableDialog::RefreshTable()
 				QString::fromUtf8(it2.first.c_str()));
 			if (it2.first == "Any") {
 				label->setProperty("themeID", "good");
-				label->setText(QString::fromUtf8(obs_module_text("Any")));
+				label->setText(QString::fromUtf8(
+					obs_module_text("Any")));
 			} else {
 				auto scene = obs_get_source_by_name(
 					it2.first.c_str());
