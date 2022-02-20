@@ -495,11 +495,16 @@ TransitionTableDialog::~TransitionTableDialog()
 
 void TransitionTableDialog::AddClicked()
 {
-	const auto fromScene = fromCombo->currentText();
-	const auto toScene = toCombo->currentText();
+	auto fromScene = fromCombo->currentText();
+	auto toScene = toCombo->currentText();
 	const auto transition = transitionCombo->currentText();
 	if (fromScene.isEmpty() || toScene.isEmpty() || transition.isEmpty())
 		return;
+	if (fromScene == QString::fromUtf8(obs_module_text("Any")))
+		fromScene = "Any";
+	if (toScene == QString::fromUtf8(obs_module_text("Any")))
+		toScene = "Any";
+
 	auto &t = transition_table[fromScene.toUtf8().constData()]
 				  [toScene.toUtf8().constData()];
 	t.transition = transition.toUtf8().constData();
@@ -560,8 +565,12 @@ void TransitionTableDialog::SelectAllChanged()
 
 void TransitionTableDialog::RefreshTable()
 {
-	const auto fromScene = fromCombo->currentText();
-	const auto toScene = toCombo->currentText();
+	auto fromScene = fromCombo->currentText();
+	auto toScene = toCombo->currentText();
+	if (fromScene == QString::fromUtf8(obs_module_text("Any")))
+		fromScene = "Any";
+	if (toScene == QString::fromUtf8(obs_module_text("Any")))
+		toScene = "Any";
 	for (auto row = mainLayout->rowCount() - 1; row >= 2; row--) {
 		for (auto col = mainLayout->columnCount() - 1; col >= 0;
 		     col--) {
@@ -591,6 +600,7 @@ void TransitionTableDialog::RefreshTable()
 				new QLabel(QString::fromUtf8(it.first.c_str()));
 			if (it.first == "Any") {
 				label->setProperty("themeID", "good");
+				label->setText(QString::fromUtf8(obs_module_text("Any")));
 			} else {
 				auto scene = obs_get_source_by_name(
 					it.first.c_str());
@@ -605,6 +615,7 @@ void TransitionTableDialog::RefreshTable()
 				QString::fromUtf8(it2.first.c_str()));
 			if (it2.first == "Any") {
 				label->setProperty("themeID", "good");
+				label->setText(QString::fromUtf8(obs_module_text("Any")));
 			} else {
 				auto scene = obs_get_source_by_name(
 					it2.first.c_str());
