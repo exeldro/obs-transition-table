@@ -8,7 +8,7 @@
 #include <QGridLayout>
 #include <QSpinBox>
 
-#include "obs-frontend-api.h"
+#include <obs-frontend-api.h>
 
 class TransitionTableDialog : public QDialog {
 	Q_OBJECT

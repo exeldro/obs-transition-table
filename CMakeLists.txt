@@ -8,16 +8,24 @@ endif()
 
 project(transition-table VERSION 0.2.5)
 set(PROJECT_FULL_NAME "Transition Table")
+add_library(${PROJECT_NAME} MODULE)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/version.h.in ${CMAKE_CURRENT_SOURCE_DIR}/version.h)
 
-set(transition-table_HEADERS
-	transition-table.hpp
-	version.h)
-set(transition-table_SOURCES
-	transition-table.cpp)
+target_sources(${PROJECT_NAME} PRIVATE
+	transition-table.cpp
+	transition-table.hpp)
 
-if(WIN32)
+if(BUILD_OUT_OF_TREE)
+  find_package(libobs REQUIRED)
+  find_package(obs-frontend-api REQUIRED)
+  include(cmake/ObsPluginHelpers.cmake)
+  set(OBS_FRONTEND_API_NAME "obs-frontend-api")
+else()
+	set(OBS_FRONTEND_API_NAME "frontend-api")
+endif()
+
+if(OS_WINDOWS)
 	get_filename_component(ISS_FILES_DIR "${CMAKE_BINARY_DIR}\\..\\package" ABSOLUTE)
 	file(TO_NATIVE_PATH "${ISS_FILES_DIR}" ISS_FILES_DIR)
 	get_filename_component(ISS_PACKAGE_DIR "${CMAKE_PACKAGE_PREFIX}\\.." ABSOLUTE)
@@ -27,26 +35,17 @@ if(WIN32)
 	configure_file("installer.iss.in"
 			"${PROJECT_BINARY_DIR}/installer.iss"
 		)
-	configure_file(resource.rc.in transition-table.rc)
-	list(APPEND transition-table_SOURCES
-		transition-table.rc)
+	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/resource.rc.in ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.rc)
+	target_sources(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.rc)
+	
 elseif(OS_MACOS)
 	set(MACOS_BUNDLEID "com.exeldro.${PROJECT_NAME}")
-	configure_file("CI/macos/installer-macos.pkgproj.in" "${CMAKE_BINARY_DIR}/installer-macos.generated.pkgproj")
+	set(MACOSX_PLUGIN_GUI_IDENTIFIER "${MACOS_BUNDLEID}")
+	set(MACOSX_PLUGIN_BUNDLE_VERSION "${PROJECT_VERSION}")
+	set(MACOSX_PLUGIN_SHORT_VERSION_STRING "1")
+	configure_file(cmake/bundle/macos/installer-macos.pkgproj.in ${CMAKE_BINARY_DIR}/installer-macos.generated.pkgproj)
+	target_compile_options(${PROJECT_NAME} PRIVATE -Wall)
 endif()
-
-if(BUILD_OUT_OF_TREE)
-  find_package(libobs REQUIRED)
-  find_package(obs-frontend-api REQUIRED)
-  include(cmake/ObsPluginHelpers.cmake)
-  set(OBS_FRONTEND_API_NAME "obs-frontend-api")
-else()
-  set(OBS_FRONTEND_API_NAME "frontend-api")
-endif()
-
-add_library(${PROJECT_NAME} MODULE
-	${transition-table_HEADERS}
-	${transition-table_SOURCES})
 
 # lines if you want add Qt UI in your plugin
 find_qt(COMPONENTS Widgets COMPONENTS_LINUX Gui)
@@ -55,7 +54,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES AUTOMOC ON AUTOUIC ON AUTORCC O
 target_link_libraries(${PROJECT_NAME}
 		OBS::${OBS_FRONTEND_API_NAME}
 		Qt::Widgets
-		libobs)
+		OBS::libobs)
 
 if(BUILD_OUT_OF_TREE)
     if(NOT LIB_OUT_DIR)
