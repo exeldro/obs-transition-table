@@ -143,8 +143,6 @@ static void frontend_save_load(obs_data_t *save_data, bool saving, void *)
 						obs_data_get_string(
 							transition,
 							"transition");
-					bool custom_duration = obs_data_get_bool(
-						transition, "custom_duration");
 					const uint32_t duration =
 						obs_data_get_int(transition,
 								 "duration");
@@ -267,6 +265,7 @@ static void frontend_event(enum obs_frontend_event event, void *)
 
 static void source_rename(void *data, calldata_t *call_data)
 {
+	UNUSED_PARAMETER(data);
 	string new_name = calldata_string(call_data, "new_name");
 	string prev_name = calldata_string(call_data, "prev_name");
 	auto it = transition_table.find(prev_name);
@@ -286,6 +285,9 @@ static void source_rename(void *data, calldata_t *call_data)
 bool enable_hotkey(void *data, obs_hotkey_pair_id id, obs_hotkey_t *hotkey,
 		   bool pressed)
 {
+	UNUSED_PARAMETER(data);
+	UNUSED_PARAMETER(id);
+	UNUSED_PARAMETER(hotkey);
 	if (!transition_table_enabled && pressed) {
 		transition_table_enabled = true;
 		set_transition_overrides();
@@ -297,6 +299,9 @@ bool enable_hotkey(void *data, obs_hotkey_pair_id id, obs_hotkey_t *hotkey,
 bool disable_hotkey(void *data, obs_hotkey_pair_id id, obs_hotkey_t *hotkey,
 		    bool pressed)
 {
+	UNUSED_PARAMETER(data);
+	UNUSED_PARAMETER(id);
+	UNUSED_PARAMETER(hotkey);
 	if (transition_table_enabled && pressed) {
 		transition_table_enabled = false;
 		clear_transition_overrides();
