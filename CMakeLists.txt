@@ -8,6 +8,11 @@ endif()
 
 project(transition-table VERSION 0.2.5)
 set(PROJECT_FULL_NAME "Transition Table")
+
+# Set new UUIDs when you start to create a new plugin.
+set(MACOS_PACKAGE_UUID "F720F3E7-EBCA-49BF-ACB4-327FDCB8E78E")
+set(MACOS_INSTALLER_UUID "3E599B4A-97D1-482F-8C4A-83F01D38F710")
+
 add_library(${PROJECT_NAME} MODULE)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/version.h.in ${CMAKE_CURRENT_SOURCE_DIR}/version.h)
