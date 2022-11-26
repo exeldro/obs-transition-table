@@ -7,6 +7,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QCompleter>
+#include <QFileDialog>
 
 #include <QPushButton>
 #include <QScrollArea>
@@ -464,15 +465,48 @@ TransitionTableDialog::TransitionTableDialog(QMainWindow *parent)
 	scrollArea->setWidgetResizable(true);
 
 	QPushButton *closeButton = new QPushButton(obs_module_text("Close"));
+	QPushButton *exportButton = new QPushButton(obs_module_text("Export"));
+	QPushButton *importButton = new QPushButton(obs_module_text("Import"));
 	QPushButton *deleteButton = new QPushButton(obs_module_text("Delete"));
 
 	QHBoxLayout *bottomLayout = new QHBoxLayout;
 	bottomLayout->addWidget(deleteButton, 0, Qt::AlignLeft);
+	bottomLayout->addWidget(exportButton, 0, Qt::AlignRight);
+	bottomLayout->addWidget(importButton, 0, Qt::AlignLeft);
 	bottomLayout->addWidget(closeButton, 0, Qt::AlignRight);
 
 	connect(deleteButton, &QPushButton::clicked,
 		[this]() { DeleteClicked(); });
 	connect(closeButton, &QPushButton::clicked, [this]() { close(); });
+	connect(exportButton, &QPushButton::clicked, []() {
+		const QString fileName = QFileDialog::getSaveFileName(
+			nullptr,
+			QString::fromUtf8(obs_module_text("SaveTransitionTable")),
+			QString(), "JSON File (*.json)");
+		if (fileName.isEmpty())
+			return;
+		const auto fu = fileName.toUtf8();
+		obs_data_t *data = obs_data_create();
+		frontend_save_load(data, true, nullptr);
+		obs_data_save_json(data, fu.constData());
+		obs_data_release(data);
+	});
+	connect(importButton, &QPushButton::clicked, [this]() {
+		const QString fileName = QFileDialog::getOpenFileName(
+			nullptr,
+			QString::fromUtf8(obs_module_text("LoadTransitionTable")),
+			QString(), "JSON File (*.json)");
+		if (fileName.isEmpty())
+			return;
+		const auto fu = fileName.toUtf8();
+		obs_data_t *data =
+			obs_data_create_from_json_file(fu.constData());
+		frontend_save_load(data, false, nullptr);
+		obs_data_release(data);
+		RefreshTable();
+		if (transition_table_enabled)
+			set_transition_overrides();
+	});
 
 	vlayout = new QVBoxLayout;
 	vlayout->setContentsMargins(11, 11, 11, 11);

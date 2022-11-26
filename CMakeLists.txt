@@ -6,7 +6,7 @@ else()
   cmake_minimum_required(VERSION 3.18)
 endif()
 
-project(transition-table VERSION 0.2.5)
+project(transition-table VERSION 0.2.6)
 set(PROJECT_FULL_NAME "Transition Table")
 
 # Set new UUIDs when you start to create a new plugin.
