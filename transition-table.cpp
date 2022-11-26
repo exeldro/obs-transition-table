@@ -471,6 +471,11 @@ TransitionTableDialog::TransitionTableDialog(QMainWindow *parent)
 
 	QHBoxLayout *bottomLayout = new QHBoxLayout;
 	bottomLayout->addWidget(deleteButton, 0, Qt::AlignLeft);
+	bottomLayout->addWidget(
+		new QLabel(
+			"<a href=\"https://obsproject.com/forum/resources/transition-table.1174/\">Transition Table</a> (" PROJECT_VERSION
+			") by <a href=\"https://www.exeldro.com\">Exeldro</a>"),
+		0, Qt::AlignCenter);
 	bottomLayout->addWidget(exportButton, 0, Qt::AlignRight);
 	bottomLayout->addWidget(importButton, 0, Qt::AlignLeft);
 	bottomLayout->addWidget(closeButton, 0, Qt::AlignRight);
@@ -481,7 +486,8 @@ TransitionTableDialog::TransitionTableDialog(QMainWindow *parent)
 	connect(exportButton, &QPushButton::clicked, []() {
 		const QString fileName = QFileDialog::getSaveFileName(
 			nullptr,
-			QString::fromUtf8(obs_module_text("SaveTransitionTable")),
+			QString::fromUtf8(
+				obs_module_text("SaveTransitionTable")),
 			QString(), "JSON File (*.json)");
 		if (fileName.isEmpty())
 			return;
@@ -494,7 +500,8 @@ TransitionTableDialog::TransitionTableDialog(QMainWindow *parent)
 	connect(importButton, &QPushButton::clicked, [this]() {
 		const QString fileName = QFileDialog::getOpenFileName(
 			nullptr,
-			QString::fromUtf8(obs_module_text("LoadTransitionTable")),
+			QString::fromUtf8(
+				obs_module_text("LoadTransitionTable")),
 			QString(), "JSON File (*.json)");
 		if (fileName.isEmpty())
 			return;
