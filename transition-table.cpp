@@ -466,20 +466,22 @@ TransitionTableDialog::TransitionTableDialog(QMainWindow *parent)
 
 	QPushButton *closeButton = new QPushButton(obs_module_text("Close"));
 	QPushButton *exportButton = new QPushButton(obs_module_text("Export"));
+	QPushButton *matrixButton = new QPushButton(obs_module_text("Matrix"));
 	QPushButton *importButton = new QPushButton(obs_module_text("Import"));
 	QPushButton *deleteButton = new QPushButton(obs_module_text("Delete"));
 
 	QHBoxLayout *bottomLayout = new QHBoxLayout;
-	bottomLayout->addWidget(deleteButton, 0, Qt::AlignLeft);
 	bottomLayout->addWidget(
 		new QLabel(
 			"<a href=\"https://obsproject.com/forum/resources/transition-table.1174/\">Transition Table</a> (" PROJECT_VERSION
 			") by <a href=\"https://www.exeldro.com\">Exeldro</a>"),
-		0, Qt::AlignCenter);
+		0, Qt::AlignLeft);
 	bottomLayout->addWidget(exportButton, 0, Qt::AlignRight);
-	bottomLayout->addWidget(importButton, 0, Qt::AlignLeft);
+	bottomLayout->addWidget(importButton, 0, Qt::AlignRight);
+	bottomLayout->addWidget(matrixButton, 0, Qt::AlignRight);
+	bottomLayout->addWidget(deleteButton, 0, Qt::AlignRight);
 	bottomLayout->addWidget(closeButton, 0, Qt::AlignRight);
-
+	bottomLayout->setStretch(0, 1);
 	connect(deleteButton, &QPushButton::clicked,
 		[this]() { DeleteClicked(); });
 	connect(closeButton, &QPushButton::clicked, [this]() { close(); });
@@ -514,6 +516,8 @@ TransitionTableDialog::TransitionTableDialog(QMainWindow *parent)
 		if (transition_table_enabled)
 			set_transition_overrides();
 	});
+	connect(matrixButton, &QPushButton::clicked, this,
+		&TransitionTableDialog::ShowMatrix);
 
 	vlayout = new QVBoxLayout;
 	vlayout->setContentsMargins(11, 11, 11, 11);
@@ -735,4 +739,79 @@ void TransitionTableDialog::mouseDoubleClickEvent(QMouseEvent *event)
 		return;
 	fromCombo->setCurrentText(from);
 	toCombo->setCurrentText(to);
+}
+
+void TransitionTableDialog::ShowMatrix()
+{
+	const auto md = new QDialog(this);
+	md->setWindowTitle(
+		QString::fromUtf8(obs_module_text("TransitionMatrix")));
+	md->setAttribute(Qt::WA_DeleteOnClose);
+	const auto m = new QGridLayout;
+	std::list<std::string> scenes;
+	for (const auto &it : transition_table) {
+		scenes.push_back(it.first);
+		for (const auto &it2 : it.second) {
+			scenes.push_back(it2.first);
+		}
+	}
+	scenes.sort();
+	scenes.unique();
+	int column = 1;
+	for (const auto &it : scenes) {
+		auto label = new QLabel;
+		if (it == "Any") {
+
+			label->setProperty("themeID", "good");
+			label->setText(
+				QString::fromUtf8(obs_module_text("Any")));
+
+		} else {
+			label->setText(QString::fromUtf8(it.c_str()));
+			auto scene = obs_get_source_by_name(it.c_str());
+			if (scene) {
+				obs_source_release(scene);
+			} else {
+				label->setProperty("themeID", "error");
+			}
+		}
+		m->addWidget(label, 0, column);
+		column++;
+	}
+	int row = 1;
+	for (const auto &it : scenes) {
+		const auto label = new QLabel;
+		if (it == "Any") {
+			label->setProperty("themeID", "good");
+			label->setText(
+				QString::fromUtf8(obs_module_text("Any")));
+
+		} else {
+			label->setText(QString::fromUtf8(it.c_str()));
+			auto scene = obs_get_source_by_name(it.c_str());
+			if (scene) {
+				obs_source_release(scene);
+			} else {
+				label->setProperty("themeID", "error");
+			}
+		}
+		m->addWidget(label, row, 0);
+		auto f1 = transition_table.find(it);
+		column = 1;
+		for (const auto &it2 : scenes) {
+			string t;
+			if (f1 != transition_table.end()) {
+				auto f2 = f1->second.find(it2);
+				if (f2 != f1->second.end()) {
+					t = f2->second.transition;
+				}
+			}
+			m->addWidget(new QLabel(QString::fromUtf8(t.c_str())),
+				     row, column);
+			column++;
+		}
+		row++;
+	}
+	md->setLayout(m);
+	md->exec();
 }

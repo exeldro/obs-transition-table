@@ -29,6 +29,7 @@ public:
 	~TransitionTableDialog();
 public slots:
 	void RefreshTable();
+	void ShowMatrix();
 
 protected:
 	virtual void mouseDoubleClickEvent(QMouseEvent *event) override;
