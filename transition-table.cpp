@@ -67,6 +67,38 @@ static void load_transition_matrix(obs_data_t *obj)
 	obs_data_array_release(transitions);
 }
 
+static void load_transitions(obs_data_t *obj)
+{
+	obs_data_array_t *transitions =
+		obs_data_get_array(obj, "transitions");
+	if (!transitions)
+		return;
+	const size_t count =
+		obs_data_array_count(transitions);
+	for (size_t i = 0; i < count; i++) {
+		obs_data_t *transition =
+			obs_data_array_item(transitions,
+			                    i);
+		string fromScene = obs_data_get_string(
+			transition, "from_scene");
+		string toScene = obs_data_get_string(
+			transition, "to_scene");
+		string transitionName =
+			obs_data_get_string(
+				transition,
+				"transition");
+		const uint32_t duration =
+			obs_data_get_int(transition,
+			                 "duration");
+		transition_table[fromScene][toScene]
+			.transition = transitionName;
+		transition_table[fromScene][toScene]
+			.duration = duration;
+		obs_data_release(transition);
+	}
+	obs_data_array_release(transitions);
+}
+
 static void frontend_save_load(obs_data_t *save_data, bool saving, void *)
 {
 	if (saving) {
@@ -128,34 +160,7 @@ static void frontend_save_load(obs_data_t *save_data, bool saving, void *)
 			obs_hotkey_pair_load(transition_table_hotkey, eh, dh);
 			obs_data_array_release(eh);
 			obs_data_array_release(dh);
-			obs_data_array_t *transitions =
-				obs_data_get_array(obj, "transitions");
-			if (transitions) {
-				size_t count =
-					obs_data_array_count(transitions);
-				for (size_t i = 0; i < count; i++) {
-					obs_data_t *transition =
-						obs_data_array_item(transitions,
-								    i);
-					string fromScene = obs_data_get_string(
-						transition, "from_scene");
-					string toScene = obs_data_get_string(
-						transition, "to_scene");
-					string transitionName =
-						obs_data_get_string(
-							transition,
-							"transition");
-					const uint32_t duration =
-						obs_data_get_int(transition,
-								 "duration");
-					transition_table[fromScene][toScene]
-						.transition = transitionName;
-					transition_table[fromScene][toScene]
-						.duration = duration;
-					obs_data_release(transition);
-				}
-				obs_data_array_release(transitions);
-			}
+			load_transitions(obj);
 			obs_data_release(obj);
 		} else {
 			obj = obs_data_get_obj(save_data,
@@ -491,7 +496,7 @@ TransitionTableDialog::TransitionTableDialog(QMainWindow *parent)
 	connect(deleteButton, &QPushButton::clicked,
 		[this]() { DeleteClicked(); });
 	connect(closeButton, &QPushButton::clicked, [this]() { close(); });
-	connect(exportButton, &QPushButton::clicked, []() {
+	connect(exportButton, &QPushButton::clicked, [this]() {
 		const QString fileName = QFileDialog::getSaveFileName(
 			nullptr,
 			QString::fromUtf8(
@@ -500,8 +505,76 @@ TransitionTableDialog::TransitionTableDialog(QMainWindow *parent)
 		if (fileName.isEmpty())
 			return;
 		const auto fu = fileName.toUtf8();
+
+		const auto transitions_array = obs_data_array_create();
+		bool selection = false;
+		for (auto row = 2; row < mainLayout->rowCount(); row++) {
+			auto *item = mainLayout->itemAtPosition(row, 4);
+			if (!item)
+				continue;
+			auto *checkBox =
+				dynamic_cast<QCheckBox *>(item->widget());
+			if (!checkBox || !checkBox->isChecked())
+				continue;
+
+			item = mainLayout->itemAtPosition(row, 0);
+			auto *label = dynamic_cast<QLabel *>(item->widget());
+			if (!label)
+				continue;
+			string fromScene = label->text().toUtf8().constData();
+			if (fromScene == obs_module_text("Any"))
+				fromScene = "Any";
+			auto fs_it = transition_table.find(fromScene);
+			if (fs_it == transition_table.end())
+				continue;
+			item = mainLayout->itemAtPosition(row, 1);
+			label = dynamic_cast<QLabel *>(item->widget());
+			if (!label)
+				continue;
+			string toScene = label->text().toUtf8().constData();
+			if (toScene == obs_module_text("Any"))
+				toScene = "Any";
+			auto ts_it = fs_it->second.find(toScene);
+			if (ts_it == fs_it->second.end())
+				continue;
+			selection = true;
+			obs_data_t *transition = obs_data_create();
+			obs_data_set_string(transition, "from_scene",
+					    fromScene.c_str());
+			obs_data_set_string(transition, "to_scene",
+					    toScene.c_str());
+			obs_data_set_string(transition, "transition",
+					    ts_it->second.transition.c_str());
+			obs_data_set_int(transition, "duration",
+					 ts_it->second.duration);
+			obs_data_array_push_back(transitions_array, transition);
+			obs_data_release(transition);
+		}
+		if (!selection) {
+			for (const auto &it : transition_table) {
+				for (const auto &it2 : it.second) {
+					obs_data_t *transition =
+						obs_data_create();
+					obs_data_set_string(transition,
+							    "from_scene",
+							    it.first.c_str());
+					obs_data_set_string(transition,
+							    "to_scene",
+							    it2.first.c_str());
+					obs_data_set_string(
+						transition, "transition",
+						it2.second.transition.c_str());
+					obs_data_set_int(transition, "duration",
+							 it2.second.duration);
+					obs_data_array_push_back(
+						transitions_array, transition);
+					obs_data_release(transition);
+				}
+			}
+		}
 		obs_data_t *data = obs_data_create();
-		frontend_save_load(data, true, nullptr);
+		obs_data_set_array(data, "transitions", transitions_array);
+		obs_data_array_release(transitions_array);
 		obs_data_save_json(data, fu.constData());
 		obs_data_release(data);
 	});
@@ -516,7 +589,7 @@ TransitionTableDialog::TransitionTableDialog(QMainWindow *parent)
 		const auto fu = fileName.toUtf8();
 		obs_data_t *data =
 			obs_data_create_from_json_file(fu.constData());
-		frontend_save_load(data, false, nullptr);
+		load_transitions(data);
 		obs_data_release(data);
 		RefreshTable();
 		if (transition_table_enabled)
