@@ -16,6 +16,7 @@
 #include <QMouseEvent>
 #include <QSpinBox>
 #include <QTableView>
+#include <QTableWidget>
 #include <QtWidgets/QColorDialog>
 
 OBS_DECLARE_MODULE()
@@ -464,11 +465,16 @@ TransitionTableDialog::TransitionTableDialog(QMainWindow *parent)
 	scrollArea->setWidget(widget);
 	scrollArea->setWidgetResizable(true);
 
-	QPushButton *closeButton = new QPushButton(obs_module_text("Close"));
-	QPushButton *exportButton = new QPushButton(obs_module_text("Export"));
-	QPushButton *matrixButton = new QPushButton(obs_module_text("Matrix"));
-	QPushButton *importButton = new QPushButton(obs_module_text("Import"));
-	QPushButton *deleteButton = new QPushButton(obs_module_text("Delete"));
+	QPushButton *closeButton =
+		new QPushButton(QString::fromUtf8(obs_module_text("Close")));
+	QPushButton *exportButton =
+		new QPushButton(QString::fromUtf8(obs_module_text("Export")));
+	QPushButton *matrixButton =
+		new QPushButton(QString::fromUtf8(obs_module_text("Matrix")));
+	QPushButton *importButton =
+		new QPushButton(QString::fromUtf8(obs_module_text("Import")));
+	QPushButton *deleteButton =
+		new QPushButton(QString::fromUtf8(obs_module_text("Delete")));
 
 	QHBoxLayout *bottomLayout = new QHBoxLayout;
 	bottomLayout->addWidget(
@@ -747,57 +753,42 @@ void TransitionTableDialog::ShowMatrix()
 	md->setWindowTitle(
 		QString::fromUtf8(obs_module_text("TransitionMatrix")));
 	md->setAttribute(Qt::WA_DeleteOnClose);
-	const auto m = new QGridLayout;
+	md->setSizeGripEnabled(true);
+
 	std::list<std::string> scenes;
 	for (const auto &it : transition_table) {
-		scenes.push_back(it.first);
+		if (it.first != "Any")
+			scenes.push_back(it.first);
 		for (const auto &it2 : it.second) {
-			scenes.push_back(it2.first);
+			if (it2.first != "Any")
+				scenes.push_back(it2.first);
 		}
 	}
 	scenes.sort();
 	scenes.unique();
-	int column = 1;
+	scenes.push_front("Any");
+	const int s = (int)scenes.size();
+	const auto w = new QTableWidget(s, s);
+	int i = 0;
 	for (const auto &it : scenes) {
-		auto label = new QLabel;
-		if (it == "Any") {
-
-			label->setProperty("themeID", "good");
-			label->setText(
-				QString::fromUtf8(obs_module_text("Any")));
-
-		} else {
-			label->setText(QString::fromUtf8(it.c_str()));
-			auto scene = obs_get_source_by_name(it.c_str());
-			if (scene) {
-				obs_source_release(scene);
-			} else {
-				label->setProperty("themeID", "error");
-			}
-		}
-		m->addWidget(label, 0, column);
-		column++;
+		w->setHorizontalHeaderItem(
+			i, new QTableWidgetItem(
+				   QString::fromUtf8(
+					   it == "Any" ? obs_module_text("Any")
+						       : it.c_str()),
+				   QTableWidgetItem::ItemType::Type));
+		w->setVerticalHeaderItem(
+			i, new QTableWidgetItem(
+				   QString::fromUtf8(
+					   it == "Any" ? obs_module_text("Any")
+						       : it.c_str()),
+				   QTableWidgetItem::ItemType::Type));
+		i++;
 	}
-	int row = 1;
+	int row = 0;
 	for (const auto &it : scenes) {
-		const auto label = new QLabel;
-		if (it == "Any") {
-			label->setProperty("themeID", "good");
-			label->setText(
-				QString::fromUtf8(obs_module_text("Any")));
-
-		} else {
-			label->setText(QString::fromUtf8(it.c_str()));
-			auto scene = obs_get_source_by_name(it.c_str());
-			if (scene) {
-				obs_source_release(scene);
-			} else {
-				label->setProperty("themeID", "error");
-			}
-		}
-		m->addWidget(label, row, 0);
 		auto f1 = transition_table.find(it);
-		column = 1;
+		int column = 0;
 		for (const auto &it2 : scenes) {
 			string t;
 			if (f1 != transition_table.end()) {
@@ -806,12 +797,27 @@ void TransitionTableDialog::ShowMatrix()
 					t = f2->second.transition;
 				}
 			}
-			m->addWidget(new QLabel(QString::fromUtf8(t.c_str())),
-				     row, column);
+			w->setCellWidget(
+				row, column,
+				new QLabel(QString::fromUtf8(t.c_str())));
 			column++;
 		}
 		row++;
 	}
+	const auto m = new QVBoxLayout;
+	m->addWidget(w);
+
+	QPushButton *closeButton =
+		new QPushButton(QString::fromUtf8(obs_module_text("Close")));
+	connect(closeButton, &QPushButton::clicked, [md]() { md->close(); });
+	QHBoxLayout *bottomLayout = new QHBoxLayout;
+	bottomLayout->addWidget(
+		new QLabel(
+			"<a href=\"https://obsproject.com/forum/resources/transition-table.1174/\">Transition Table</a> (" PROJECT_VERSION
+			") by <a href=\"https://www.exeldro.com\">Exeldro</a>"),
+		0, Qt::AlignLeft);
+	bottomLayout->addWidget(closeButton, 0, Qt::AlignRight);
+	m->addLayout(bottomLayout);
 	md->setLayout(m);
 	md->exec();
 }
