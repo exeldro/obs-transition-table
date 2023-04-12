@@ -259,11 +259,13 @@ void load_set_function()
 
 void hotkey_set_set(void *data, obs_hotkey_id id, obs_hotkey_t *hotkey, bool pressed)
 {
-	if (isactive_import_export == false) {
+	UNUSED_PARAMETER(data);
+	UNUSED_PARAMETER(hotkey);
+	if (isactive_import_export == false && pressed) {
 		tt_setlist_list_elem_t *elem = setlist_get_elem(setlist_ptr, id);
 		if (elem != NULL) {
-			if (QString::fromUtf8(elem->setname) != tt_current_setname) {
-				tt_current_setname = QString::fromUtf8(elem->setname);
+			if (QString::fromUtf8(elem->setname.c_str()) != tt_current_setname) {
+				tt_current_setname = QString::fromUtf8(elem->setname.c_str());
 				load_set_function();
 				ttr->signalRefresh();
 			}
@@ -496,10 +498,9 @@ static void frontend_save_load(obs_data_t *save_data, bool saving, void *)
 				}
 				obs_data_array_release(transitions);
 				string setname = obs_module_text("InitialSetName");
-				obs_data_t *obj = obs_data_create();
 				tt_setlist_list_elem_t *new_elem = setlist_create_elem();
 				setlist_append_elem(&setlist_ptr, new_elem, setname);
-				tt_current_setname = QString::fromUtf8(setname);
+				tt_current_setname = QString::fromUtf8(setname.c_str());
 				tt_default_setname = "";
 				tt_ignore_default_set = false;
 				save_set_function();
@@ -765,7 +766,7 @@ TransitionTableDialog::TransitionTableDialog(QMainWindow *parent)
 	selectSetCombo->view()->setMinimumWidth(300);
 	tt_setlist_list_elem_t *next = setlist_ptr;
 	do {
-		selectSetCombo->addItem(QString::fromUtf8(next->setname));
+		selectSetCombo->addItem(QString::fromUtf8(next->setname.c_str()));
 		next = next->next_elem;
 	} while (next != NULL);
 	connect(selectSetCombo, &QComboBox::currentTextChanged, [this]() { SelectSetChanged(); });
@@ -1099,7 +1100,6 @@ void TransitionTableDialog::NewSetClicked()
 	QString setname = QInputDialog::getText(this, obs_module_text("NewSetWindowTitle"), obs_module_text("NewSetWindowName"), QLineEdit::Normal, "", &ok);
 	if (ok && !setname.isEmpty()) {
 		if (selectSetCombo->findText(setname) == -1) {
-			obs_data_t *obj = obs_data_create();
 			tt_setlist_list_elem_t *new_elem = setlist_create_elem();
 			setlist_append_elem(&setlist_ptr, new_elem, setname.toUtf8().constData());
 			selectSetCombo->addItem(setname);
@@ -1149,7 +1149,7 @@ void TransitionTableDialog::RenameSetClicked()
 			setlist_append_elem(&setlist_ptr, new_elem, setname.toUtf8().constData());
 			obs_hotkey_load(new_elem->hotkey_id, data);
 			new_elem->transition_array = old_elem->transition_array;
-			if (QString::fromUtf8(old_elem->setname) == tt_default_setname) {
+			if (QString::fromUtf8(old_elem->setname.c_str()) == tt_default_setname) {
 				tt_default_setname = setname;
 			}
 			setlist_destroy_elem(&setlist_ptr, old_elem);
@@ -1259,11 +1259,9 @@ void TransitionTableDialog::mouseDoubleClickEvent(QMouseEvent *event)
 
 void TransitionTableDialog::ShowMatrix()
 {
-	// const auto md = new QDialog(this);
 	md = new QDialog(this);
 	md->setWindowTitle(
 		QString::fromUtf8(obs_module_text("TransitionMatrix")));
-	// md->setAttribute(Qt::WA_DeleteOnClose);
 	md->setSizeGripEnabled(true);
 
 	std::list<std::string> scenes;
@@ -1320,8 +1318,7 @@ void TransitionTableDialog::ShowMatrix()
 
 	QPushButton *closeButton =
 		new QPushButton(QString::fromUtf8(obs_module_text("Close")));
-	// connect(closeButton, &QPushButton::clicked, [md]() { md->close(); });
-	connect(closeButton, &QPushButton::clicked, [this]() { md->close(); });
+	connect(closeButton, &QPushButton::clicked, []() { md->close(); });
 	QHBoxLayout *bottomLayout = new QHBoxLayout;
 	bottomLayout->addWidget(
 		new QLabel(
@@ -1333,12 +1330,7 @@ void TransitionTableDialog::ShowMatrix()
 	md->setLayout(m);
 
 	md->setGeometry(geometry().x(), geometry().y(), 400, 200);
-	/* if (transition_table_width > min_width &&
-	    transition_table_height > min_height) {
-		resize(md_width, md_height);
-	}*/
 
-	// md->exec();
 	md->show();
 }
 
@@ -1346,7 +1338,6 @@ void TransitionTableDialog::ShowMatrix()
 void TransitionTableDialog::RefreshMatrix()
 {
 	if (md->isVisible()) {
-		/*close matrix, */
 		md->close();
 		ShowMatrix();
 	}
