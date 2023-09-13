@@ -69,31 +69,22 @@ static void load_transition_matrix(obs_data_t *obj)
 
 static void load_transitions(obs_data_t *obj)
 {
-	obs_data_array_t *transitions =
-		obs_data_get_array(obj, "transitions");
+	obs_data_array_t *transitions = obs_data_get_array(obj, "transitions");
 	if (!transitions)
 		return;
-	const size_t count =
-		obs_data_array_count(transitions);
+	const size_t count = obs_data_array_count(transitions);
 	for (size_t i = 0; i < count; i++) {
-		obs_data_t *transition =
-			obs_data_array_item(transitions,
-			                    i);
-		string fromScene = obs_data_get_string(
-			transition, "from_scene");
-		string toScene = obs_data_get_string(
-			transition, "to_scene");
+		obs_data_t *transition = obs_data_array_item(transitions, i);
+		string fromScene =
+			obs_data_get_string(transition, "from_scene");
+		string toScene = obs_data_get_string(transition, "to_scene");
 		string transitionName =
-			obs_data_get_string(
-				transition,
-				"transition");
+			obs_data_get_string(transition, "transition");
 		const uint32_t duration =
-			obs_data_get_int(transition,
-			                 "duration");
-		transition_table[fromScene][toScene]
-			.transition = transitionName;
-		transition_table[fromScene][toScene]
-			.duration = duration;
+			obs_data_get_int(transition, "duration");
+		transition_table[fromScene][toScene].transition =
+			transitionName;
+		transition_table[fromScene][toScene].duration = duration;
 		obs_data_release(transition);
 	}
 	obs_data_array_release(transitions);
@@ -210,8 +201,11 @@ static void clear_transition_overrides()
 static void set_transition_overrides()
 {
 	obs_source_t *scene = obs_frontend_get_current_scene();
-	string fromScene = obs_source_get_name(scene);
-	obs_source_release(scene);
+	string fromScene;
+	if (scene) {
+		fromScene = obs_source_get_name(scene);
+		obs_source_release(scene);
+	}
 
 	auto fs_it = fromScene.empty() ? transition_table.end()
 				       : transition_table.find(fromScene);
