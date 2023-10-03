@@ -18,6 +18,7 @@
 #include <QTableView>
 #include <QTableWidget>
 #include <QtWidgets/QColorDialog>
+#include "obs-websocket-api.h"
 
 OBS_DECLARE_MODULE()
 OBS_MODULE_AUTHOR("Exeldro");
@@ -311,6 +312,53 @@ bool disable_hotkey(void *data, obs_hotkey_pair_id id, obs_hotkey_t *hotkey,
 	return false;
 }
 
+static void get_transition(std::string from_scene, std::string to_scene,
+		    std::string &transition, int &duration)
+{
+	auto fs_it = transition_table.find(from_scene);
+	auto as_it = transition_table.find("Any");
+	if (fs_it != transition_table.end()) {
+		auto to_it = fs_it->second.find(to_scene);
+		if (to_it == fs_it->second.end()) {
+			to_it = fs_it->second.find("Any");
+		}
+		if (to_it != fs_it->second.end()) {
+			transition = to_it->second.transition;
+			duration = to_it->second.duration;
+		}
+	}
+	if (transition.empty() && as_it != transition_table.end()) {
+		auto to_it = as_it->second.find(to_scene);
+		if (to_it == as_it->second.end()) {
+			to_it = as_it->second.find("Any");
+		}
+		if (to_it != as_it->second.end()) {
+			transition = to_it->second.transition;
+			duration = to_it->second.duration;
+		}
+	}
+}
+
+static void proc_get_transition(void *data, calldata_t *cd)
+{
+	UNUSED_PARAMETER(data);
+	const char *val = nullptr;
+	std::string from_scene;
+	if (calldata_get_string(cd, "from_scene", &val) && val) {
+		from_scene = val;
+	}
+	val = nullptr;
+	std::string to_scene;
+	if (calldata_get_string(cd, "to_scene", &val) && val) {
+		to_scene = val;
+	}
+	string transition;
+	auto duration = 0;
+	get_transition(from_scene, to_scene, transition, duration);
+	calldata_set_string(cd, "transition", transition.c_str());
+	calldata_set_int(cd, "duration", duration);
+}
+
 bool obs_module_load(void)
 {
 	blog(LOG_INFO, "[Transition Table] loaded version %s", PROJECT_VERSION);
@@ -340,8 +388,50 @@ bool obs_module_load(void)
 		"transition-table.disable",
 		obs_module_text("TransitionTable.Disable"), enable_hotkey,
 		disable_hotkey, nullptr, nullptr);
-
+	auto ph = obs_get_proc_handler();
+	proc_handler_add(
+		ph,
+		"void get_transition_table_transition(string from_scene, string to_scene, out string transition, out int duration)",
+		proc_get_transition, nullptr);
 	return true;
+}
+
+static obs_websocket_vendor vendor = nullptr;
+
+static void vendor_get_transition(obs_data_t *request_data,
+						obs_data_t *response_data,
+						void *param)
+{
+	UNUSED_PARAMETER(param);
+	std::string from_scene = obs_data_get_string(request_data, "from_scene");
+	if (from_scene.empty()) {
+		obs_data_set_string(response_data, "error",
+				    "'from_scene' not set");
+		obs_data_set_bool(response_data, "success", false);
+		return;
+	}
+	std::string to_scene =
+		obs_data_get_string(request_data, "to_scene");
+	if (to_scene.empty()) {
+		obs_data_set_string(response_data, "error",
+				    "'to_scene' not set");
+		obs_data_set_bool(response_data, "success", false);
+		return;
+	}
+	string transition;
+	auto duration = 0;
+	get_transition(from_scene, to_scene, transition, duration);
+	obs_data_set_string(response_data, "transition", transition.c_str());
+	obs_data_set_int(response_data, "duration", duration);
+	obs_data_set_bool(response_data, "success", true);
+}
+
+void obs_module_post_load(void)
+{
+	vendor = obs_websocket_register_vendor("transition-table");
+	if (!vendor)
+		return;
+	obs_websocket_vendor_register_request(vendor, "get_transition",  vendor_get_transition, nullptr);
 }
 
 void obs_module_unload(void)
