@@ -313,7 +313,7 @@ bool disable_hotkey(void *data, obs_hotkey_pair_id id, obs_hotkey_t *hotkey,
 }
 
 static void get_transition(std::string from_scene, std::string to_scene,
-		    std::string &transition, int &duration)
+			   std::string &transition, int &duration)
 {
 	auto fs_it = transition_table.find(from_scene);
 	auto as_it = transition_table.find("Any");
@@ -399,25 +399,12 @@ bool obs_module_load(void)
 static obs_websocket_vendor vendor = nullptr;
 
 static void vendor_get_transition(obs_data_t *request_data,
-						obs_data_t *response_data,
-						void *param)
+				  obs_data_t *response_data, void *param)
 {
 	UNUSED_PARAMETER(param);
-	std::string from_scene = obs_data_get_string(request_data, "from_scene");
-	if (from_scene.empty()) {
-		obs_data_set_string(response_data, "error",
-				    "'from_scene' not set");
-		obs_data_set_bool(response_data, "success", false);
-		return;
-	}
-	std::string to_scene =
-		obs_data_get_string(request_data, "to_scene");
-	if (to_scene.empty()) {
-		obs_data_set_string(response_data, "error",
-				    "'to_scene' not set");
-		obs_data_set_bool(response_data, "success", false);
-		return;
-	}
+	std::string from_scene =
+		obs_data_get_string(request_data, "from_scene");
+	std::string to_scene = obs_data_get_string(request_data, "to_scene");
 	string transition;
 	auto duration = 0;
 	get_transition(from_scene, to_scene, transition, duration);
@@ -426,12 +413,90 @@ static void vendor_get_transition(obs_data_t *request_data,
 	obs_data_set_bool(response_data, "success", true);
 }
 
+static void vendor_set_transition(obs_data_t *request_data,
+				  obs_data_t *response_data, void *param)
+{
+	UNUSED_PARAMETER(param);
+	std::string from_scene =
+		obs_data_get_string(request_data, "from_scene");
+	if (from_scene.empty()) {
+		obs_data_set_string(response_data, "error",
+				    "'from_scene' not set");
+		obs_data_set_bool(response_data, "success", false);
+		return;
+	}
+	std::string to_scene = obs_data_get_string(request_data, "to_scene");
+	if (to_scene.empty()) {
+		obs_data_set_string(response_data, "error",
+				    "'to_scene' not set");
+		obs_data_set_bool(response_data, "success", false);
+		return;
+	}
+	std::string transition =
+		obs_data_get_string(request_data, "transition");
+	if (transition.empty()) {
+		auto fs_it = transition_table.find(from_scene);
+		if (fs_it == transition_table.end()) {
+			obs_data_set_string(response_data, "error",
+					    "'from_scene' not found in table");
+			obs_data_set_bool(response_data, "success", false);
+			return;
+		}
+		auto ts_it = fs_it->second.find(to_scene);
+		if (ts_it == fs_it->second.end()) {
+			obs_data_set_string(
+				response_data, "error",
+				"'to_scene' not found for this 'from_scene'");
+			obs_data_set_bool(response_data, "success", false);
+			return;
+		}
+		fs_it->second.erase(ts_it);
+	} else {
+		int duration = obs_data_get_int(request_data, "duration");
+		auto &t = transition_table[from_scene][to_scene];
+		t.transition = transition;
+		t.duration = duration;
+	}
+	obs_data_set_bool(response_data, "success", true);
+}
+
+static void vendor_get_table(obs_data_t *request_data,
+			     obs_data_t *response_data, void *param)
+{
+	UNUSED_PARAMETER(request_data);
+	UNUSED_PARAMETER(param);
+	const auto transitions_array = obs_data_array_create();
+	for (const auto &it : transition_table) {
+		for (const auto &it2 : it.second) {
+			obs_data_t *transition = obs_data_create();
+			obs_data_set_string(transition, "from_scene",
+					    it.first.c_str());
+			obs_data_set_string(transition, "to_scene",
+					    it2.first.c_str());
+			obs_data_set_string(transition, "transition",
+					    it2.second.transition.c_str());
+			obs_data_set_int(transition, "duration",
+					 it2.second.duration);
+			obs_data_array_push_back(transitions_array, transition);
+			obs_data_release(transition);
+		}
+	}
+	obs_data_set_bool(response_data, "success", true);
+	obs_data_set_array(response_data, "transitions", transitions_array);
+	obs_data_array_release(transitions_array);
+}
+
 void obs_module_post_load(void)
 {
 	vendor = obs_websocket_register_vendor("transition-table");
 	if (!vendor)
 		return;
-	obs_websocket_vendor_register_request(vendor, "get_transition",  vendor_get_transition, nullptr);
+	obs_websocket_vendor_register_request(vendor, "get_transition",
+					      vendor_get_transition, nullptr);
+	obs_websocket_vendor_register_request(vendor, "set_transition",
+					      vendor_set_transition, nullptr);
+	obs_websocket_vendor_register_request(vendor, "get_table",
+					      vendor_get_table, nullptr);
 }
 
 void obs_module_unload(void)
