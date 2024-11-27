@@ -1,9 +1,6 @@
 # --- Detect if the plugin is build out of tree or not ---
 if(CMAKE_PROJECT_NAME STREQUAL "obs-studio")
   set(BUILD_OUT_OF_TREE OFF)
-  if(OBS_CMAKE_VERSION VERSION_GREATER_EQUAL 3.0.0)
-    legacy_check()
-  endif()
 else()
   set(BUILD_OUT_OF_TREE ON)
   cmake_minimum_required(VERSION 3.18)
@@ -25,11 +22,17 @@ target_sources(${PROJECT_NAME} PRIVATE
 	transition-table.hpp)
 
 if(BUILD_OUT_OF_TREE)
-  find_package(libobs REQUIRED)
-  find_package(obs-frontend-api REQUIRED)
-  include(cmake/ObsPluginHelpers.cmake)
-  set(OBS_FRONTEND_API_NAME "obs-frontend-api")
+	find_package(libobs REQUIRED)
+	find_package(obs-frontend-api REQUIRED)
+	include(cmake/ObsPluginHelpers.cmake)
+	find_qt(COMPONENTS Widgets COMPONENTS_LINUX Gui)
+	set(OBS_FRONTEND_API_NAME "obs-frontend-api")
 else()
+	if(OBS_VERSION VERSION_GREATER_EQUAL 30.1.0)
+		find_package(Qt6 COMPONENTS Core Widgets)
+	else()
+		find_qt(COMPONENTS Widgets COMPONENTS_LINUX Gui)
+	endif()
 	set(OBS_FRONTEND_API_NAME "frontend-api")
 endif()
 
@@ -55,8 +58,6 @@ elseif(OS_MACOS)
 	target_compile_options(${PROJECT_NAME} PRIVATE -Wall)
 endif()
 
-# lines if you want add Qt UI in your plugin
-find_qt(COMPONENTS Widgets COMPONENTS_LINUX Gui)
 set_target_properties(${PROJECT_NAME} PROPERTIES AUTOMOC ON AUTOUIC ON AUTORCC ON)
 
 target_link_libraries(${PROJECT_NAME}
@@ -65,25 +66,25 @@ target_link_libraries(${PROJECT_NAME}
 		OBS::libobs)
 
 if(BUILD_OUT_OF_TREE)
-    if(NOT LIB_OUT_DIR)
-        set(LIB_OUT_DIR "/lib/obs-plugins")
-    endif()
-    if(NOT DATA_OUT_DIR)
-        set(DATA_OUT_DIR "/share/obs/obs-plugins/${PROJECT_NAME}")
-    endif()
-    set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
-    install(TARGETS ${PROJECT_NAME}
-        LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/${LIB_OUT_DIR})
-    install(DIRECTORY data/locale
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/${DATA_OUT_DIR})
-    setup_plugin_target(${PROJECT_NAME})
+	if(NOT LIB_OUT_DIR)
+		set(LIB_OUT_DIR "/lib/obs-plugins")
+	endif()
+	if(NOT DATA_OUT_DIR)
+		set(DATA_OUT_DIR "/share/obs/obs-plugins/${PROJECT_NAME}")
+	endif()
+	set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
+	install(TARGETS ${PROJECT_NAME}
+		LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/${LIB_OUT_DIR})
+	install(DIRECTORY data/locale
+		DESTINATION ${CMAKE_INSTALL_PREFIX}/${DATA_OUT_DIR})
+	setup_plugin_target(${PROJECT_NAME})
 else()
-    target_include_directories(${PROJECT_NAME} PRIVATE
-        "${CMAKE_SOURCE_DIR}/UI/obs-frontend-api")
-    if(OBS_CMAKE_VERSION VERSION_GREATER_EQUAL 3.0.0)
-        set_target_properties_obs(${PROJECT_NAME} PROPERTIES FOLDER "plugins/exeldro" PREFIX "")
-    else()
-        set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "plugins/exeldro")
-        setup_plugin_target(${PROJECT_NAME})
-    endif()
+	target_include_directories(${PROJECT_NAME} PRIVATE
+		"${CMAKE_SOURCE_DIR}/UI/obs-frontend-api")
+	if(OBS_CMAKE_VERSION VERSION_GREATER_EQUAL 3.0.0)
+		set_target_properties_obs(${PROJECT_NAME} PROPERTIES FOLDER "plugins/exeldro" PREFIX "")
+	else()
+		set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "plugins/exeldro")
+		setup_plugin_target(${PROJECT_NAME})
+	endif()
 endif()
