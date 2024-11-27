@@ -482,7 +482,11 @@ TransitionTableDialog::TransitionTableDialog(QMainWindow *parent) : QDialog(pare
 	mainLayout->setColumnStretch(1, 1);
 	mainLayout->setColumnStretch(2, 1);
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+	connect(checkbox, &QCheckBox::checkStateChanged, [this]() { SelectAllChanged(); });
+#else
 	connect(checkbox, &QCheckBox::stateChanged, [this]() { SelectAllChanged(); });
+#endif
 
 	idx = 0;
 	fromCombo = new QComboBox();
