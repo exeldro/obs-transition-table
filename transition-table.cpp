@@ -94,7 +94,7 @@ static void load_transitions(obs_data_t *obj, const char *canvas_name)
 
 static bool transition_table_enabled = true;
 
-static void set_transition_overrides(obs_canvas_t *canvas)
+static void set_transition_overrides_queued(obs_canvas_t *canvas)
 {
 	if (obs_canvas_removed(canvas))
 		return;
@@ -162,6 +162,15 @@ static void set_transition_overrides(obs_canvas_t *canvas)
 		obs_data_release(data);
 		obs_source_release(scenes[i]);
 	}
+}
+
+static void set_transition_overrides(obs_canvas_t *canvas)
+{
+	if (obs_canvas_removed(canvas))
+		return;
+	obs_queue_task(
+		obs_in_task_thread(OBS_TASK_GRAPHICS) ? OBS_TASK_UI : OBS_TASK_GRAPHICS,
+		[](void *param) { set_transition_overrides_queued((obs_canvas_t *)param); }, canvas, false);
 }
 
 static void transition_start(void *data, calldata_t *call_data)
