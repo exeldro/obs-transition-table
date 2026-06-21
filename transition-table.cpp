@@ -168,9 +168,9 @@ static void set_transition_overrides(obs_canvas_t *canvas)
 {
 	if (obs_canvas_removed(canvas))
 		return;
-	obs_queue_task(
-		obs_in_task_thread(OBS_TASK_GRAPHICS) ? OBS_TASK_UI : OBS_TASK_GRAPHICS,
-		[](void *param) { set_transition_overrides_queued((obs_canvas_t *)param); }, canvas, false);
+
+	auto main_window = (QMainWindow *)obs_frontend_get_main_window();
+	QMetaObject::invokeMethod(main_window, [canvas]() { set_transition_overrides_queued(canvas); }, Qt::QueuedConnection);
 }
 
 static void transition_start(void *data, calldata_t *call_data)
