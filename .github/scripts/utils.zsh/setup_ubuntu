@@ -53,7 +53,7 @@ if (( ! (${skips[(Ie)all]} + ${skips[(Ie)deps]}) )) {
       libgles2-mesa-dev \
       libsimde-dev \
       obs-studio
-  elif [[ "$ubuntu_version" == 26.* ]]; then
+  else
     sudo apt update
 
     sudo apt-get install ${apt_args} \
@@ -61,9 +61,6 @@ if (( ! (${skips[(Ie)all]} + ${skips[(Ie)deps]}) )) {
       libgles2-mesa-dev \
       libsimde-dev \
       libobs-dev
-  else
-    print -u2 "Unsupported version: $ubuntu_version"
-    exit 1
   fi
 
   local -a _qt_packages=()
