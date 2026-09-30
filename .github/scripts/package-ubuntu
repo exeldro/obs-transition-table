@@ -159,6 +159,21 @@ ${_usage_host:-}"
     log_group "Packaging ${product_name}..."
     pushd ${project_root}
     cmake --build build_${target##*-} --config ${config} -t package ${cmake_args}
+
+    # Ubuntu 26.04 dropped the transitional Qt 6 t64 package names used by
+    # older Ubuntu releases. Normalize generated Debian package dependencies
+    # so the package installs on current Ubuntu while keeping the same Qt ABI.
+    for deb in release/*.deb; do
+      [[ -f ${deb} ]] || continue
+      local package_dir=$(mktemp -d)
+      dpkg-deb -R ${deb} ${package_dir}
+      sed -i \
+        -e 's/libqt6gui6t64/libqt6gui6/g' \
+        -e 's/libqt6widgets6t64/libqt6widgets6/g' \
+        ${package_dir}/DEBIAN/control
+      dpkg-deb -b ${package_dir} ${deb}
+      rm -rf ${package_dir}
+    done
     popd
   } else {
     log_group "Archiving ${product_name}..."
