@@ -285,10 +285,23 @@ jobs:
           config: ${{ needs.check-event.outputs.config }}
 
       - name: Upload Unsigned Artifact 📡
+        id: upload-unsigned-dll
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-windows-x64-programdata-${{ needs.check-event.outputs.commitHash }}
           path: ${{ github.workspace }}/release/${{ needs.check-event.outputs.config }}/
+
+      - name: submit signing request dll
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
+          organization-id: '7056097d-201e-430d-a1d9-3e272e9fa1d8'
+          project-slug: 'obs-transition-table'
+          signing-policy-slug: 'test-signing'
+          artifact-configuration-slug: 'programdata-zip'
+          github-artifact-id: '${{ steps.upload-unsigned-dll.outputs.artifact-id }}'
+          wait-for-completion: true
+          output-artifact-directory: ${{ github.workspace }}/release/${{ needs.check-event.outputs.config }}/
 
       - name: Package Plugin 📀
         uses: ./.github/actions/package-plugin
