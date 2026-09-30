@@ -291,7 +291,7 @@ jobs:
           name: ${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-windows-x64-programdata-${{ needs.check-event.outputs.commitHash }}
           path: ${{ github.workspace }}/release/${{ needs.check-event.outputs.config }}/
 
-      - name: submit signing request dll
+      - name: submit signing request dll ✍
         uses: signpath/github-action-submit-signing-request@v3
         with:
           api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
@@ -309,6 +309,25 @@ jobs:
           target: x64
           config: ${{ needs.check-event.outputs.config }}
           package: ${{ fromJSON(needs.check-event.outputs.package) }}
+
+      - name: Upload installer 📡
+        id: upload-unsigned-installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-windows-x64-installer-${{ needs.check-event.outputs.commitHash }}
+          path: ${{ github.workspace }}/release/${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-windows-x64-Installer.exe
+
+      - name: submit signing request installer ✍
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
+          organization-id: '7056097d-201e-430d-a1d9-3e272e9fa1d8'
+          project-slug: 'obs-transition-table'
+          signing-policy-slug: 'test-signing'
+          artifact-configuration-slug: 'installer-zip'
+          github-artifact-id: '${{ steps.upload-unsigned-installer.outputs.artifact-id }}'
+          wait-for-completion: true
+          output-artifact-directory: ${{ github.workspace }}/release/
 
       - name: Upload Artifacts 📡
         uses: actions/upload-artifact@v4
